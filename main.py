@@ -172,3 +172,125 @@ app.add_handler(CallbackQueryHandler(button))
 
 print("Bot Running...")
 app.run_polling()
+from telegram import Update, ChatPermissions
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+
+TOKEN = "YOUR_BOT_TOKEN"
+
+# ---------------- MEMORY ----------------
+filters_db = {}
+warn_db = {}
+
+# ---------------- UTIL ----------------
+def format_text(text, user):
+    return text.replace("{first}", user.first_name or "") \
+               .replace("{username}", "@" + user.username if user.username else user.first_name)
+
+# ---------------- FILTER SET ----------------
+async def set_filter(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 2:
+        return await update.message.reply_text("Usage: /filter hello hello {first} how are you")
+
+    keyword = context.args[0].lower()
+    reply = " ".join(context.args[1:])
+
+    filters_db[update.effective_chat.id, keyword] = reply
+    await update.message.reply_text(f"✅ Filter set for '{keyword}'")
+
+# ---------------- REMOVE FILTER ----------------
+async def stop_filter(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        return await update.message.reply_text("Usage: /stop hello")
+
+    keyword = context.args[0].lower()
+    key = (update.effective_chat.id, keyword)
+
+    if key in filters_db:
+        del filters_db[key]
+        await update.message.reply_text("❌ Filter removed")
+    else:
+        await update.message.reply_text("Not found")
+
+# ---------------- MESSAGE CHECK (AUTO REPLY ENGINE) ----------------
+async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+
+    text = update.message.text.lower()
+    chat_id = update.effective_chat.id
+    user = update.message.from_user
+
+    for (cid, keyword), reply in filters_db.items():
+        if cid == chat_id and keyword in text:
+            final_text = format_text(reply, user)
+            await update.message.reply_text(final_text)
+
+# ---------------- BAN ----------------
+async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message.reply_to_message:
+        return await update.message.reply_text("Reply to user")
+
+    uid = update.message.reply_to_message.from_user.id
+    await context.bot.ban_chat_member(update.effective_chat.id, uid)
+    await update.message.reply_text("🚫 User banned")
+
+# ---------------- MUTE ----------------
+async def mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message.reply_to_message:
+        return await update.message.reply_text("Reply to user")
+
+    uid = update.message.reply_to_message.from_user.id
+
+    await context.bot.restrict_chat_member(
+        update.effective_chat.id,
+        uid,
+        ChatPermissions(can_send_messages=False)
+    )
+
+    await update.message.reply_text("🔇 User muted")
+
+# ---------------- UNMUTE ----------------
+async def unmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message.reply_to_message:
+        return await update.message.reply_text("Reply to user")
+
+    uid = update.message.reply_to_message.from_user.id
+
+    await context.bot.restrict_chat_member(
+        update.effective_chat.id,
+        uid,
+        ChatPermissions(can_send_messages=True)
+    )
+
+    await update.message.reply_text("🔊 User unmuted")
+
+# ---------------- START ----------------
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🛡️ Rose Engine Active\n\n"
+        "Commands:\n"
+        "/filter keyword reply\n"
+        "/stop keyword\n"
+        "/ban (reply)\n"
+        "/mute /unmute"
+    )
+
+# ---------------- APP ----------------
+app = ApplicationBuilder().token(TOKEN).build()
+
+app.add_handler(CommandHandler("start", start))
+
+# FILTER SYSTEM
+app.add_handler(CommandHandler("filter", set_filter))
+app.add_handler(CommandHandler("stop", stop_filter))
+
+# MODERATION
+app.add_handler(CommandHandler("ban", ban))
+app.add_handler(CommandHandler("mute", mute))
+app.add_handler(CommandHandler("unmute", unmute))
+
+# AUTO MESSAGE ENGINE
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+
+print("🚀 Rose Engine Running...")
+app.run_polling()
