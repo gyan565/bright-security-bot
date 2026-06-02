@@ -1,7 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = "8438749703:AAEG9LuBBYfWbd2ekJJFfD3mJA1zmv1JFL0"
 
 # ---------------- FULL MAIN MENU (28 BUTTONS, 3 per row) ----------------
 def main_menu():
