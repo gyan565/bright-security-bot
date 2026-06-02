@@ -294,3 +294,106 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)
 
 print("🚀 Rose Engine Running...")
 app.run_polling()
+from telegram import Update
+from telegram.ext import CommandHandler, ChatMemberHandler, ContextTypes
+
+# ---------------- MEMORY ----------------
+welcome_db = {}
+goodbye_db = {}
+
+DEFAULT_WELCOME = "Welcome {first} in our group {chatname}"
+
+DEFAULT_GOODBYE = "👋 Goodbye {first}, we will miss you in {chatname}"
+
+# ---------------- FORMAT ----------------
+def format_text(text, user, chat):
+    return text.replace("{first}", user.first_name or "") \
+               .replace("{chatname}", chat.title or "")
+
+# ---------------- SET WELCOME ----------------
+async def setwelcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    text = " ".join(context.args)
+
+    if not text:
+        return await update.message.reply_text("Usage: /setwelcome message")
+
+    welcome_db[chat_id] = text
+    await update.message.reply_text("✅ Welcome message set")
+
+# ---------------- SHOW WELCOME ----------------
+async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    msg = welcome_db.get(chat_id, DEFAULT_WELCOME)
+
+    await update.message.reply_text("📌 Current Welcome:\n\n" + msg)
+
+# ---------------- RESET WELCOME ----------------
+async def resetwelcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in welcome_db:
+        del welcome_db[chat_id]
+
+    await update.message.reply_text("🔄 Welcome reset to default")
+
+# ---------------- SET GOODBYE ----------------
+async def setgoodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    text = " ".join(context.args)
+
+    if not text:
+        return await update.message.reply_text("Usage: /setgoodbye message")
+
+    goodbye_db[chat_id] = text
+    await update.message.reply_text("✅ Goodbye message set")
+
+# ---------------- SHOW GOODBYE ----------------
+async def goodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    msg = goodbye_db.get(chat_id, DEFAULT_GOODBYE)
+
+    await update.message.reply_text("📌 Current Goodbye:\n\n" + msg)
+
+# ---------------- RESET GOODBYE ----------------
+async def resetgoodbye(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in goodbye_db:
+        del goodbye_db[chat_id]
+
+    await update.message.reply_text("🔄 Goodbye reset to default")
+
+# ---------------- AUTO WELCOME ----------------
+async def user_join(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.chat_member.new_chat_member:
+        user = update.chat_member.new_chat_member.user
+        chat = update.chat_member.chat
+
+        msg = welcome_db.get(chat.id, DEFAULT_WELCOME)
+        await context.bot.send_message(
+            chat.id,
+            format_text(msg, user, chat)
+        )
+
+# ---------------- AUTO GOODBYE ----------------
+async def user_leave(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.chat_member.old_chat_member and update.chat_member.new_chat_member.status == "left":
+        user = update.chat_member.old_chat_member.user
+        chat = update.chat_member.chat
+
+        msg = goodbye_db.get(chat.id, DEFAULT_GOODBYE)
+        await context.bot.send_message(
+            chat.id,
+            format_text(msg, user, chat)
+        )
+
+# ---------------- REGISTER COMMANDS ----------------
+app.add_handler(CommandHandler("setwelcome", setwelcome))
+app.add_handler(CommandHandler("welcome", welcome))
+app.add_handler(CommandHandler("resetwelcome", resetwelcome))
+
+app.add_handler(CommandHandler("setgoodbye", setgoodbye))
+app.add_handler(CommandHandler("goodbye", goodbye))
+app.add_handler(CommandHandler("resetgoodbye", resetgoodbye))
+
+app.add_handler(ChatMemberHandler(user_join))
+app.add_handler(ChatMemberHandler(user_leave))
