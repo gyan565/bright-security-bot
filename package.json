@@ -1,7 +1,7 @@
 {
   "name": "bright-security-bot",
   "version": "1.0.0",
-  "description": "Advanced Telegram Security Bot",
+  "description": "Bright Security Bot for Telegram",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
