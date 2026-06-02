@@ -1,98 +1,174 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-TOKEN = "8438749703:AAEG9LuBBYfWbd2ekJJFfD3mJA1zmv1JFL0"
+TOKEN = "YOUR_BOT_TOKEN"
 
-# ---------------- WELCOME + MENU ----------------
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    keyboard = [
+# ---------------- FULL MAIN MENU (28 BUTTONS, 3 per row) ----------------
+def main_menu():
+    return InlineKeyboardMarkup([
 
         [
             InlineKeyboardButton("🛡️ Admin", callback_data='admin'),
             InlineKeyboardButton("🌊 Antiflood", callback_data='antiflood'),
             InlineKeyboardButton("🚨 AntiRaid", callback_data='antiraid')
         ],
-
         [
             InlineKeyboardButton("✅ Approval", callback_data='approval'),
             InlineKeyboardButton("⛔ Bans", callback_data='bans'),
             InlineKeyboardButton("🚫 Blocklists", callback_data='blocklists')
         ],
-
         [
             InlineKeyboardButton("🧪 CAPTCHA", callback_data='captcha'),
-            InlineKeyboardButton("🧹 Clean Commands", callback_data='cleancommands'),
+            InlineKeyboardButton("🧹 Clean Cmd", callback_data='cleancommands'),
             InlineKeyboardButton("🧼 Clean Service", callback_data='cleanservice')
         ],
-
         [
             InlineKeyboardButton("🔗 Connections", callback_data='connections'),
             InlineKeyboardButton("🔕 Disabling", callback_data='disabling'),
             InlineKeyboardButton("🌐 Federations", callback_data='federations')
         ],
-
         [
             InlineKeyboardButton("🧲 Filters", callback_data='filters'),
             InlineKeyboardButton("🎨 Formatting", callback_data='formatting'),
             InlineKeyboardButton("👋 Greetings", callback_data='greetings')
         ],
-
         [
             InlineKeyboardButton("📦 Import/Export", callback_data='importexport'),
             InlineKeyboardButton("🗣️ Languages", callback_data='languages'),
             InlineKeyboardButton("🔒 Locks", callback_data='locks')
         ],
-
         [
             InlineKeyboardButton("📋 Log Channels", callback_data='logchannels'),
             InlineKeyboardButton("✨ Misc", callback_data='misc'),
             InlineKeyboardButton("📝 Notes", callback_data='notes')
         ],
-
         [
             InlineKeyboardButton("📌 Pin", callback_data='pin'),
             InlineKeyboardButton("🔐 Privacy", callback_data='privacy'),
             InlineKeyboardButton("🧽 Purges", callback_data='purges')
         ],
-
         [
             InlineKeyboardButton("📣 Reports", callback_data='reports'),
             InlineKeyboardButton("📜 Rules", callback_data='rules'),
             InlineKeyboardButton("🧩 Topics", callback_data='topics')
         ],
-
         [
             InlineKeyboardButton("⚠️ Warnings", callback_data='warnings'),
             InlineKeyboardButton("⭐ Custom Instances", callback_data='custominstances')
         ]
-    ]
+    ])
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
+# ---------------- BACK BUTTON ----------------
+def back_btn():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("⬅️ Back", callback_data='back')]
+    ])
 
-    # 👉 WELCOME MESSAGE
+# ---------------- START ----------------
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🛡️ Welcome to Bright Security Bot\n\n"
-        "I help you manage and secure your group efficiently.\n\n"
-        "⚙️ Use the buttons below to access all features.",
-        reply_markup=reply_markup
+        "🛡️ Welcome to Security Bot\n\nChoose a module:",
+        reply_markup=main_menu()
     )
 
 # ---------------- BUTTON HANDLER ----------------
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     query = update.callback_query
     await query.answer()
-
     data = query.data
 
-    await query.edit_message_text(f"⚙️ {data.upper()} module opened")
+    if data == "back":
+        await query.edit_message_text("🛡️ Main Menu", reply_markup=main_menu())
 
-# ---------------- RUN BOT ----------------
+    elif data == "admin":
+        await query.edit_message_text("🛡️ Admin Panel\n/promote /demote /ban /unban", reply_markup=back_btn())
+
+    elif data == "antiflood":
+        await query.edit_message_text("🌊 AntiFlood System Active", reply_markup=back_btn())
+
+    elif data == "antiraid":
+        await query.edit_message_text("🚨 AntiRaid Protection ON", reply_markup=back_btn())
+
+    elif data == "bans":
+        await query.edit_message_text("⛔ Ban System Ready", reply_markup=back_btn())
+
+    elif data == "blocklists":
+        await query.edit_message_text("🚫 Blocklist System Active", reply_markup=back_btn())
+
+    elif data == "captcha":
+        await query.edit_message_text("🧪 CAPTCHA Enabled", reply_markup=back_btn())
+
+    elif data == "cleancommands":
+        await query.edit_message_text("🧹 Clean Commands ON", reply_markup=back_btn())
+
+    elif data == "cleanservice":
+        await query.edit_message_text("🧼 Clean Service ON", reply_markup=back_btn())
+
+    elif data == "connections":
+        await query.edit_message_text("🔗 Connections System", reply_markup=back_btn())
+
+    elif data == "disabling":
+        await query.edit_message_text("🔕 Disabling Commands", reply_markup=back_btn())
+
+    elif data == "federations":
+        await query.edit_message_text("🌐 Federation System", reply_markup=back_btn())
+
+    elif data == "filters":
+        await query.edit_message_text("🧲 Filters Active", reply_markup=back_btn())
+
+    elif data == "formatting":
+        await query.edit_message_text("🎨 Formatting Tools", reply_markup=back_btn())
+
+    elif data == "greetings":
+        await query.edit_message_text("👋 Greetings System", reply_markup=back_btn())
+
+    elif data == "importexport":
+        await query.edit_message_text("📦 Import/Export System", reply_markup=back_btn())
+
+    elif data == "languages":
+        await query.edit_message_text("🗣️ Language Settings", reply_markup=back_btn())
+
+    elif data == "locks":
+        await query.edit_message_text("🔒 Locks System", reply_markup=back_btn())
+
+    elif data == "logchannels":
+        await query.edit_message_text("📋 Log Channels", reply_markup=back_btn())
+
+    elif data == "misc":
+        await query.edit_message_text("✨ Misc Tools", reply_markup=back_btn())
+
+    elif data == "notes":
+        await query.edit_message_text("📝 Notes System", reply_markup=back_btn())
+
+    elif data == "pin":
+        await query.edit_message_text("📌 Pin System", reply_markup=back_btn())
+
+    elif data == "privacy":
+        await query.edit_message_text("🔐 Privacy Settings", reply_markup=back_btn())
+
+    elif data == "purges":
+        await query.edit_message_text("🧽 Purge System", reply_markup=back_btn())
+
+    elif data == "reports":
+        await query.edit_message_text("📣 Reports System", reply_markup=back_btn())
+
+    elif data == "rules":
+        await query.edit_message_text("📜 Rules System", reply_markup=back_btn())
+
+    elif data == "topics":
+        await query.edit_message_text("🧩 Topics System", reply_markup=back_btn())
+
+    elif data == "warnings":
+        await query.edit_message_text("⚠️ Warning System", reply_markup=back_btn())
+
+    elif data == "custominstances":
+        await query.edit_message_text("⭐ Custom Instances", reply_markup=back_btn())
+
+# ---------------- APP ----------------
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CallbackQueryHandler(button))
 
-print("Bright Security Bot Running...")
+print("Bot Running...")
 app.run_polling()
