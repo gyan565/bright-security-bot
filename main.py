@@ -516,8 +516,9 @@ async def execute_admin_action(update: Update, context: ContextTypes.DEFAULT_TYP
         return await update.message.reply_text(f"⚙️ Structural administration instruction handled: Vector <code>{cmd}</code> resolved successfully.", parse_mode=ParseMode.HTML)
 
 # ==============================================================================
-# 9. CHAT MEMBER UPDATES (FIX FOR WELCOME AND GOODBYE MESSAGES)
+# 9. DUAL-TRIGGER WELCOME & GOODBYE ENGINE (BULLETPROOF)
 # ==============================================================================
+# Method 1: The Modern ChatMemberHandler (for Supergroups)
 async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = update.chat_member
     if not result: return
@@ -535,6 +536,22 @@ async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await context.bot.send_message(chat.id, format_text(msg, user, chat))
     
     elif old_status in ['member', 'restricted'] and new_status in ['left', 'kicked']:
+        msg = goodbye_db.get(chat.id, DEFAULT_GOODBYE)
+        await context.bot.send_message(chat.id, format_text(msg, user, chat))
+
+# Method 2: The Legacy StatusUpdate Handler (for Basic Groups)
+async def user_join_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    for member in update.message.new_chat_members:
+        chat = update.effective_chat
+        if member.id == context.bot.id: continue
+        msg = welcome_db.get(chat.id, DEFAULT_WELCOME)
+        await context.bot.send_message(chat.id, format_text(msg, member, chat))
+
+async def user_leave_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.left_chat_member:
+        user = update.message.left_chat_member
+        if user.id == context.bot.id: return
+        chat = update.effective_chat
         msg = goodbye_db.get(chat.id, DEFAULT_GOODBYE)
         await context.bot.send_message(chat.id, format_text(msg, user, chat))
 
@@ -647,7 +664,11 @@ def main():
     for cmd in heavy_admin_commands:
         app.add_handler(CommandHandler(cmd, execute_admin_action))
 
+    # Dual-Engine Registration
     app.add_handler(ChatMemberHandler(chat_member_update, ChatMemberHandler.CHAT_MEMBER))
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, user_join_event))
+    app.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, user_leave_event))
+
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, global_message_scanner))
 
     print("Bright Security Master Cluster successfully deployed and active...")
