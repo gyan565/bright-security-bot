@@ -9,7 +9,7 @@ from telegram.ext import (
     MessageHandler, ContextTypes, filters, ChatMemberHandler
 )
 
-TOKEN = "8438749703:AAEG9LuBBYfWbd2ekJJFfD3mJA1zmv1JFL0"
+TOKEN = "8438749703:AAHXXAp0hmfjyZ07D24eefCNoMFurG2OyCE"
 
 # ==============================================================================
 # 1. ADVANCED IN-MEMORY DATABASES (STATE MANAGEMENT)
