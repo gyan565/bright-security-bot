@@ -132,9 +132,9 @@ async def connect_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bot_username = context.bot.username
     url = f"https://t.me/{bot_username}?start={chat.id}"
     
-    keyboard = [[InlineKeyboardButton("Chat se connect kare", url=url)]]
+    keyboard = [[InlineKeyboardButton("चैट से कनेक्ट करे", url=url)]]
     await update.message.reply_text(
-        "पीएम में इस चैट से जुड़ने के लिए निम्न बटन पर थैप करें",
+        "पीएम में इस चैट से जुड़ने के लिए निम्न बटन पर टैप करें",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
