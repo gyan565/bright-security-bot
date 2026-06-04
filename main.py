@@ -611,7 +611,7 @@ class PingHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args): pass 
 
 def run_dummy_server():
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.environ.get("PORT", 8080))
     server = HTTPServer(('0.0.0.0', port), PingHandler)
     server.serve_forever()
 
