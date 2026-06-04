@@ -85,8 +85,7 @@ def main_menu():
         [InlineKeyboardButton("📋 Log Channels", callback_data='logchannels'), InlineKeyboardButton("✨ Misc", callback_data='misc'), InlineKeyboardButton("📝 Notes", callback_data='notes')],
         [InlineKeyboardButton("📌 Pin", callback_data='pin'), InlineKeyboardButton("🔐 Privacy", callback_data='privacy'), InlineKeyboardButton("🧽 Purges", callback_data='purges')],
         [InlineKeyboardButton("📣 Reports", callback_data='reports'), InlineKeyboardButton("📜 Rules", callback_data='rules'), InlineKeyboardButton("🧩 Topics", callback_data='topics')],
-        [InlineKeyboardButton("⚠️ Warnings", callback_data='warnings'), InlineKeyboardButton("⭐ Custom Instances", callback_data='custominstances')]
-        [InlineKeyboardButton("📢 Update Channel", url="https://t.me/BrightUpdates")]
+        [InlineKeyboardButton("⚠️ Warnings", callback_data='warnings'), InlineKeyboardButton("⭐ Custom Instances", callback_data='custominstances'), InlineKeyboardButton("📢 Update Channel", url="https://t.me/BrightUpdates")]
     ])
 
 def back_btn():
