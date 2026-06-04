@@ -1,4 +1,4 @@
 python-telegram-bot==20.8
 Flask==3.0.2
-pymongo[srv]
-dnspython
+pymongo==4.17.0
+dnspython==2.8.0
