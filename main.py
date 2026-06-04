@@ -8,8 +8,27 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler, 
     MessageHandler, ContextTypes, filters, ChatMemberHandler
 )
+from pymongo import MongoClient
 
 TOKEN = "8438749703:AAHXXAp0hmfjyZ07D24eefCNoMFurG2OyCE"
+
+# ⚠️ यहाँ अपना MONGODB वाला लिंक डालें (Quotes "" के अंदर)
+MONGO_URL = "mongodb+srv://Gyan_Expose:gyanexpose#@9000@cluster0.dpc33hb.mongodb.net/?appName=Cluster0"
+
+# ⚠️ यहाँ अपनी Telegram ID डालें (बिना Quotes के, Broadcast के लिए)
+OWNER_ID = 5678270391
+
+# ==============================================================================
+# MONGODB CONNECTION SETUP
+# ==============================================================================
+try:
+    mongo_client = MongoClient(MONGO_URL)
+    db = mongo_client["BrightSecurityBot"]     
+    users_collection = db["users"]             
+    print("✅ MongoDB Connected Successfully!")
+except Exception as e:
+    print(f"❌ MongoDB Connection Error: {e}")
+    users_collection = None
 
 # ==============================================================================
 # 1. ADVANCED IN-MEMORY DATABASES (STATE MANAGEMENT)
@@ -67,6 +86,7 @@ def main_menu():
         [InlineKeyboardButton("📌 Pin", callback_data='pin'), InlineKeyboardButton("🔐 Privacy", callback_data='privacy'), InlineKeyboardButton("🧽 Purges", callback_data='purges')],
         [InlineKeyboardButton("📣 Reports", callback_data='reports'), InlineKeyboardButton("📜 Rules", callback_data='rules'), InlineKeyboardButton("🧩 Topics", callback_data='topics')],
         [InlineKeyboardButton("⚠️ Warnings", callback_data='warnings'), InlineKeyboardButton("⭐ Custom Instances", callback_data='custominstances')]
+        [InlineKeyboardButton("📢 Update Channel", url="https://t.me/BrightUpdates")]
     ])
 
 def back_btn():
@@ -118,10 +138,24 @@ async def connect_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    
+    # 🌟 MONGODB में यूज़र को सेव करना 🌟
+    if chat.type == 'private' and users_collection is not None:
+        try:
+            if not users_collection.find_one({"_id": chat.id}):
+                users_collection.insert_one({
+                    "_id": chat.id, 
+                    "name": update.effective_user.first_name,
+                    "username": update.effective_user.username
+                })
+        except Exception as e:
+            print(f"DB Error: {e}")
+
     if context.args and update.effective_chat.type == 'private':
         try:
             chat_id = int(context.args[0])
-            chat = await context.bot.get_chat(chat_id)
+            chat_info = await context.bot.get_chat(chat_id)
             context.user_data['current_chat_id'] = chat_id
             
             is_admin = await check_admin(chat_id, update.effective_user.id, context.bot)
@@ -131,7 +165,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton("User Utilities Panel", callback_data=f'cmd_user_{chat_id}')])
             
             return await update.message.reply_text(
-                f"Connection Established.\nYou have been successfully connected to <b>{chat.title}</b> via secure tunnel mapping!", 
+                f"Connection Established.\nYou have been successfully connected to <b>{chat_info.title}</b> via secure tunnel mapping!", 
                 parse_mode=ParseMode.HTML, 
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
@@ -219,14 +253,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("cmd_back_"):
         chat_id = data.split("_")[2]
         try:
-            chat = await context.bot.get_chat(int(chat_id))
+            chat_info = await context.bot.get_chat(int(chat_id))
             is_admin = await check_admin(int(chat_id), query.from_user.id, context.bot)
             kb = []
             if is_admin: 
                 kb.append([InlineKeyboardButton("Admin Panel", callback_data=f'cmd_admin_{chat_id}')])
             kb.append([InlineKeyboardButton("User Panel", callback_data=f'cmd_user_{chat_id}')])
             await query.edit_message_text(
-                f"Connection Restored.\nYou are currently connected to <b>{chat.title}</b>.", 
+                f"Connection Restored.\nYou are currently connected to <b>{chat_info.title}</b>.", 
                 parse_mode=ParseMode.HTML,
                 reply_markup=InlineKeyboardMarkup(kb)
             )
@@ -286,7 +320,44 @@ async def unmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except: await update.message.reply_text("❌ Action failed.")
 
 # ==============================================================================
-# 7. USER UTILITY COMMANDS (RULES, WARNS, INFO, NOTES, FILTERS)
+# 7. SECURE BROADCAST COMMAND (MONGODB BACKED)
+# ==============================================================================
+async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # यह चेक करेगा कि मैसेज आपकी ID से आया है या नहीं
+    if update.effective_user.id != OWNER_ID:
+        return await update.message.reply_text("❌ You are not authorized to use this command.")
+
+    if not update.message.reply_to_message:
+        return await update.message.reply_text("Usage: Reply to any message (photo/text/video) with /broadcast")
+
+    msg_to_send = update.message.reply_to_message
+    success = 0
+    failed = 0
+
+    if users_collection is None:
+        return await update.message.reply_text("❌ Database not connected.")
+
+    all_users = list(users_collection.find())
+    total_users = len(all_users)
+    
+    if total_users == 0:
+        return await update.message.reply_text("⚠️ No users found in database!")
+
+    await update.message.reply_text(f"🚀 Broadcasting message to {total_users} users...")
+
+    for user_data in all_users:
+        user_id = user_data["_id"]
+        try:
+            await msg_to_send.copy(user_id) 
+            success += 1
+        except:
+            failed += 1
+
+    await update.message.reply_text(f"✅ Broadcast Complete!\n\n📤 Sent: {success}\n❌ Failed/Blocked: {failed}")
+
+
+# ==============================================================================
+# 8. USER UTILITY COMMANDS (RULES, WARNS, INFO, NOTES, FILTERS)
 # ==============================================================================
 async def list_filters(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id if update.effective_chat.type != 'private' else context.user_data.get('current_chat_id')
@@ -329,7 +400,7 @@ async def approval_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ <b>Clearance Metrics:</b> Account state logged: <code>Approved/Whitelisted</code> in this server cluster.", parse_mode=ParseMode.HTML)
 
 # ==============================================================================
-# 8. MASSIVE ADMIN ROUTING ENGINE (ALL REMAINING COMMANDS)
+# 9. MASSIVE ADMIN ROUTING ENGINE (ALL REMAINING COMMANDS)
 # ==============================================================================
 async def execute_admin_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id if update.effective_chat.type != 'private' else context.user_data.get('current_chat_id')
@@ -404,14 +475,22 @@ async def execute_admin_action(update: Update, context: ContextTypes.DEFAULT_TYP
         return await update.message.reply_text(f"📌 <b>Active Group Welcome Config:</b>\n{welcome_db.get(chat_id, DEFAULT_WELCOME)}", parse_mode=ParseMode.HTML)
     elif cmd == "goodbye":
         return await update.message.reply_text(f"📌 <b>Active Group Goodbye Config:</b>\n{goodbye_db.get(chat_id, DEFAULT_GOODBYE)}", parse_mode=ParseMode.HTML)
+    
+    # 🌟 NEWLINE FIX FOR SETWELCOME 🌟
     elif cmd == "setwelcome":
-        if not args: return await update.message.reply_text("Usage: /setwelcome <text>")
-        welcome_db[chat_id] = " ".join(args)
+        raw_text = update.effective_message.text
+        parts = raw_text.split(None, 1)
+        if len(parts) < 2: return await update.message.reply_text("Usage: /setwelcome <text>")
+        welcome_db[chat_id] = parts[1]
         return await update.message.reply_text("✅ Global entry notification welcoming sequence parameters saved.")
+        
     elif cmd == "setgoodbye":
-        if not args: return await update.message.reply_text("Usage: /setgoodbye <text>")
-        goodbye_db[chat_id] = " ".join(args)
+        raw_text = update.effective_message.text
+        parts = raw_text.split(None, 1)
+        if len(parts) < 2: return await update.message.reply_text("Usage: /setgoodbye <text>")
+        goodbye_db[chat_id] = parts[1]
         return await update.message.reply_text("✅ Global client exit structural message assets logged.")
+        
     elif cmd == "resetwelcome":
         welcome_db.pop(chat_id, None)
         return await update.message.reply_text("🔄 Welcomer structures fallback routing active: Default text enabled.")
@@ -428,10 +507,17 @@ async def execute_admin_action(update: Update, context: ContextTypes.DEFAULT_TYP
     elif cmd in ["captchatime", "captchamutetime", "captchamode", "captchakick", "captchakicktime", "setcaptchatext", "resetcaptchatext", "captcharules"]:
         return await update.message.reply_text(f"🧪 CAPTCHA automated algorithmic verification settings parameter modified for identifier: <code>{cmd}</code>.", parse_mode=ParseMode.HTML)
 
+    # 🌟 NEWLINE FIX FOR FILTER (Time Table Fix) 🌟
     elif cmd == "filter":
-        if len(args) < 2: return await update.message.reply_text("Usage: /filter <trigger> <reply text>")
-        filters_db[(chat_id, args[0].lower())] = " ".join(args[1:])
-        return await update.message.reply_text(f"✅ Dynamic automation filter handler hook bound to expression asset: <code>{args[0]}</code>", parse_mode=ParseMode.HTML)
+        raw_text = update.effective_message.text
+        parts = raw_text.split(None, 2) 
+        if len(parts) < 3: 
+            return await update.message.reply_text("Usage: /filter <trigger> <reply text>")
+        trigger = parts[1].lower()
+        reply_text = parts[2] 
+        filters_db[(chat_id, trigger)] = reply_text
+        return await update.message.reply_text(f"✅ Dynamic automation filter handler hook bound to expression asset: <code>{trigger}</code>", parse_mode=ParseMode.HTML)
+        
     elif cmd == "stop":
         if not args: return await update.message.reply_text("Usage: /stop <trigger>")
         if filters_db.pop((chat_id, args[0].lower()), None): return await update.message.reply_text("❌ Filter runtime mapping decoupled.")
@@ -453,10 +539,14 @@ async def execute_admin_action(update: Update, context: ContextTypes.DEFAULT_TYP
     elif cmd in ["cleanservice", "keepservice", "nocleanservice", "cleancommand", "keepcommand", "nocleancommand"]:
         return await update.message.reply_text("🧹 Channel clutter prevention sweep routine states shifted successfully.")
 
+    # 🌟 NEWLINE FIX FOR SAVE (Notes Fix) 🌟
     elif cmd == "save":
-        if len(args) < 2: return await update.message.reply_text("Usage: /save <notename> <content>")
-        notes_db[(chat_id, args[0].lower())] = " ".join(args[1:])
-        return await update.message.reply_text(f"✅ Static text note structure successfully committed to variable lookup flag: <code>#{args[0]}</code>", parse_mode=ParseMode.HTML)
+        raw_text = update.effective_message.text
+        parts = raw_text.split(None, 2)
+        if len(parts) < 3: return await update.message.reply_text("Usage: /save <notename> <content>")
+        notes_db[(chat_id, parts[1].lower())] = parts[2]
+        return await update.message.reply_text(f"✅ Static text note structure successfully committed to variable lookup flag: <code>#{parts[1]}</code>", parse_mode=ParseMode.HTML)
+        
     elif cmd == "clear":
         if not args: return await update.message.reply_text("Usage: /clear <notename>")
         if notes_db.pop((chat_id, args[0].lower()), None): return await update.message.reply_text("❌ Note asset memory registry truncated.")
@@ -476,10 +566,14 @@ async def execute_admin_action(update: Update, context: ContextTypes.DEFAULT_TYP
     elif cmd in ["setwarnmode", "warnmode", "setwarnlimit", "warnlimit", "setwarntime", "warntime"]:
         return await update.message.reply_text(f"⚠️ Warning accounting parameter metrics adjusted: Parameter token <code>{cmd}</code> processed.", parse_mode=ParseMode.HTML)
 
+    # 🌟 NEWLINE FIX FOR SETRULES 🌟
     elif cmd == "setrules":
-        if not args: return await update.message.reply_text("Usage: /setrules <text>")
-        rules_db[chat_id] = " ".join(args)
+        raw_text = update.effective_message.text
+        parts = raw_text.split(None, 1)
+        if len(parts) < 2: return await update.message.reply_text("Usage: /setrules <text>")
+        rules_db[chat_id] = parts[1]
         return await update.message.reply_text("✅ compliance rules structural layout guidelines updated.")
+        
     elif cmd in ["resetrules", "clearrules"]:
         rules_db.pop(chat_id, None)
         return await update.message.reply_text("🔄 Rules registry variables wiped cleanly.")
@@ -516,9 +610,8 @@ async def execute_admin_action(update: Update, context: ContextTypes.DEFAULT_TYP
         return await update.message.reply_text(f"⚙️ Structural administration instruction handled: Vector <code>{cmd}</code> resolved successfully.", parse_mode=ParseMode.HTML)
 
 # ==============================================================================
-# 9. DUAL-TRIGGER WELCOME & GOODBYE ENGINE (BULLETPROOF)
+# 10. DUAL-TRIGGER WELCOME & GOODBYE ENGINE (BULLETPROOF)
 # ==============================================================================
-# Method 1: The Modern ChatMemberHandler (for Supergroups)
 async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = update.chat_member
     if not result: return
@@ -539,7 +632,6 @@ async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE)
         msg = goodbye_db.get(chat.id, DEFAULT_GOODBYE)
         await context.bot.send_message(chat.id, format_text(msg, user, chat))
 
-# Method 2: The Legacy StatusUpdate Handler (for Basic Groups)
 async def user_join_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for member in update.message.new_chat_members:
         chat = update.effective_chat
@@ -556,7 +648,7 @@ async def user_leave_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat.id, format_text(msg, user, chat))
 
 # ==============================================================================
-# 10. REAL-TIME SCANNERS (FLOOD, LOCKS, BLOCKLIST, FILTERS)
+# 11. REAL-TIME SCANNERS (FLOOD, LOCKS, BLOCKLIST, FILTERS)
 # ==============================================================================
 async def global_message_scanner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text: return
@@ -600,7 +692,7 @@ async def global_message_scanner(update: Update, context: ContextTypes.DEFAULT_T
             await update.message.reply_text(format_text(reply, user))
 
 # ==============================================================================
-# 11. RENDER ANTI-CRASH PORT BINDING (BACKGROUND WEB SERVER)
+# 12. RENDER ANTI-CRASH PORT BINDING (BACKGROUND WEB SERVER)
 # ==============================================================================
 class PingHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -616,7 +708,7 @@ def run_dummy_server():
     server.serve_forever()
 
 # ==============================================================================
-# 12. MAIN RUNTIME & HANDLER REGISTRATION
+# 13. MAIN RUNTIME & HANDLER REGISTRATION
 # ==============================================================================
 def main():
     threading.Thread(target=run_dummy_server, daemon=True).start()
@@ -625,6 +717,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("connect", connect_cmd))
+    app.add_handler(CommandHandler("broadcast", broadcast_cmd)) # 🌟 Broadcast Command 🌟
     app.add_handler(CallbackQueryHandler(button))
 
     app.add_handler(CommandHandler("filters", list_filters))
@@ -664,7 +757,6 @@ def main():
     for cmd in heavy_admin_commands:
         app.add_handler(CommandHandler(cmd, execute_admin_action))
 
-    # Dual-Engine Registration
     app.add_handler(ChatMemberHandler(chat_member_update, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, user_join_event))
     app.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, user_leave_event))
