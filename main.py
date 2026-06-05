@@ -698,10 +698,13 @@ async def global_message_scanner(update: Update, context: ContextTypes.DEFAULT_T
 class PingHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
         self.end_headers()
-        self.wfile.write(b"Bright Security Matrix Core: Active Uptime Loop Verified.")
-    def log_message(self, format, *args): pass 
+        self.wfile.write(b"Bot is alive!")
+        
+    # 👇 बस यह 3 लाइनें यहाँ जोड़ दीजिए 👇
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
 
 def run_dummy_server():
     port = int(os.environ.get("PORT", 8080))
