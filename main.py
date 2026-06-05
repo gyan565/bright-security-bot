@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+import urllib.parse  # 👈 यह नया टूल पासवर्ड को ठीक करेगा
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.constants import ParseMode
@@ -11,12 +12,13 @@ from telegram.ext import (
 from pymongo import MongoClient
 
 TOKEN = "8438749703:AAHXXAp0hmfjyZ07D24eefCNoMFurG2OyCE"
-
-# ⚠️ यहाँ अपना MONGODB वाला लिंक डालें (Quotes "" के अंदर)
-MONGO_URL = "mongodb+srv://Gyan_Expose:gyanexpose#@9000@cluster0.dpc33hb.mongodb.net/?appName=Cluster0"
-
-# ⚠️ यहाँ अपनी Telegram ID डालें (बिना Quotes के, Broadcast के लिए)
 OWNER_ID = 5678270391
+
+# 👇 अपना असली पासवर्ड यहाँ डालें (स्पेशल कैरेक्टर वाला) 👇
+my_password = urllib.parse.quote_plus("gyanexpose#@9000")
+
+# 👇 अब लिंक अपने आप पासवर्ड उठा लेगा, आपको इसमें कुछ नहीं बदलना है 👇
+MONGO_URL = f"mongodb+srv://Gyan_Expose:gyanexpose#@9000@cluster0.dpc33hb.mongodb.net/?appName=Cluster0"
 
 # ==============================================================================
 # MONGODB CONNECTION SETUP
